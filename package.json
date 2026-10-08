@@ -3,22 +3,20 @@
   "private": true,
   "packageManager": "pnpm@10.34.5",
   "engines": {
-    "node": ">=20.19"
+    "node": ">=22"
   },
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "pnpm --filter @spear/web dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "test:integration": "pnpm --filter @spear/db test:integration",
-    "db:bootstrap": "pnpm --filter @spear/db bootstrap",
-    "db:push": "pnpm --filter @spear/db push",
-    "db:types": "pnpm --filter @spear/db types"
+    "db:reset": "pnpm --filter @spear/web db:reset"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
     "eslint": "^9.39.0",
+    "eslint-config-next": "16.4.0",
     "globals": "^16.4.0",
     "turbo": "2.11.7",
     "typescript": "5.9.3",

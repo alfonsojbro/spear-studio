@@ -6,5 +6,5 @@ packages:
 onlyBuiltDependencies:
   - esbuild
   - sharp
-  - "@sentry/cli"
+  - workerd
   - unrs-resolver

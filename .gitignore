@@ -19,13 +19,17 @@ next-env.d.ts
 **/.env.*.local
 !**/.env.example
 
-# supabase cli local state
-packages/db/supabase/.temp/
-packages/db/supabase/.branches/
-
 # misc
 .DS_Store
 *.log
 coverage/
 .vercel
 .sentryclirc
+
+# cloudflare
+.wrangler/
+.open-next/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+cloudflare-env.d.ts.bak
