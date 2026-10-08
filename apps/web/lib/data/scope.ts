@@ -1,10 +1,13 @@
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { canManageClients, canManageTeam } from "@spear/core";
-import { client, type Database } from "@spear/db";
+import { client, type Database, type JobMessage } from "@spear/db";
 import { ForbiddenError } from "./errors";
 import type { Viewer } from "./viewer";
 
-export type DataContext = { db: Database; viewer: Viewer };
+/** Minimal producer interface, so tests can pass a fake queue. */
+export type JobsQueue = { send(message: JobMessage): Promise<unknown> };
+
+export type DataContext = { db: Database; viewer: Viewer; jobsQueue?: JobsQueue };
 
 /** SQL condition limiting `client` rows to what the viewer may read. Always use it. */
 export function clientReadScope(viewer: Viewer): SQL {

@@ -1,0 +1,57 @@
+{
+  // Jobs worker: consumes the `jobs` queue and runs Workflows. Shares D1 with the web app.
+  // Local: `pnpm dev:jobs` (wrangler dev, Miniflare). Same local D1 state as `pnpm dev`.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "spear-jobs",
+  "main": "queues/consumer.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "vars": { "WORKER_ID": "jobs-local" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "spear-studio-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "../../packages/db/migrations"
+    }
+  ],
+  "queues": {
+    "consumers": [{ "queue": "spear-jobs-local", "max_batch_size": 10, "max_batch_timeout": 1, "max_retries": 5 }]
+  },
+  "workflows": [{ "name": "spear-system-ping-local", "binding": "SYSTEM_PING", "class_name": "SystemPingWorkflow" }],
+  "env": {
+    "dev": {
+      "name": "spear-jobs-dev",
+      "vars": { "WORKER_ID": "jobs-dev" },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "spear-studio-dev",
+          "database_id": "REPLACE_WITH_DEV_D1_ID",
+          "migrations_dir": "../../packages/db/migrations"
+        }
+      ],
+      "queues": {
+        "consumers": [{ "queue": "spear-jobs-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 5, "dead_letter_queue": "spear-jobs-dev-dlq" }]
+      },
+      "workflows": [{ "name": "spear-system-ping-dev", "binding": "SYSTEM_PING", "class_name": "SystemPingWorkflow" }]
+    },
+    "production": {
+      "name": "spear-jobs",
+      "vars": { "WORKER_ID": "jobs-prod" },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "spear-studio-prod",
+          "database_id": "REPLACE_WITH_PROD_D1_ID",
+          "migrations_dir": "../../packages/db/migrations"
+        }
+      ],
+      "queues": {
+        "consumers": [{ "queue": "spear-jobs", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 5, "dead_letter_queue": "spear-jobs-dlq" }]
+      },
+      "workflows": [{ "name": "spear-system-ping", "binding": "SYSTEM_PING", "class_name": "SystemPingWorkflow" }]
+    }
+  }
+}

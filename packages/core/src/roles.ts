@@ -1,9 +1,9 @@
 /**
- * Role model. Mirrors the check constraints in
- * packages/db/supabase/migrations/0001_core_tenancy.sql. Keep both in sync.
+ * Role model. Mirrors the CHECK constraints in packages/db/migrations/0001_core.sql
+ * and packages/db/src/schema.ts. Keep all three in sync.
  *
- * Access to data comes only from `member` / `client_member` rows.
- * The staff email domain decides who may create an account, never what they can see.
+ * Access to data comes only from `member` / `client_member` rows, enforced by the
+ * scoped data layer in apps/web/lib/data.
  */
 
 export const AGENCY_ROLES = [
@@ -18,7 +18,7 @@ export type AgencyRole = (typeof AGENCY_ROLES)[number];
 export const CLIENT_ROLES = ["freelancer", "client_approver", "client_viewer"] as const;
 export type ClientRole = (typeof CLIENT_ROLES)[number];
 
-/** Roles that may create, edit and archive clients. Matches `private.has_role` calls in 0002. */
+/** Roles that may create and edit clients. Matches `assertCanManageClients` in apps/web/lib/data/scope.ts. */
 export const CLIENT_MANAGER_ROLES = ["owner", "strategist", "account_manager"] as const satisfies readonly AgencyRole[];
 
 /** Roles allowed to invite staff and change membership. */
@@ -45,7 +45,7 @@ export function isClientRole(value: unknown): value is ClientRole {
 /**
  * Agency staff see every client of their agency. Freelancers are not staff:
  * they only see clients they are attached to via `client_member`.
- * Mirrors `private.is_agency_staff`.
+ * Mirrors `clientReadScope` in apps/web/lib/data/scope.ts.
  */
 export function isAgencyStaff(role: AgencyRole | null | undefined): boolean {
   return role != null && role !== "freelancer";

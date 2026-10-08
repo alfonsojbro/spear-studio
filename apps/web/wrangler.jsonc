@@ -1,4 +1,7 @@
 {
+  // Web app (OpenNext). Top level = local development (Miniflare, no account needed).
+  // `env.dev` / `env.production` are the deployed environments; bindings are not inherited, so each lists its own.
+  // The queue consumer + Workflow run in a second Worker: wrangler.jobs.jsonc.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "spear-studio",
   "main": ".open-next/worker.js",
@@ -12,10 +15,52 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "spear-studio-dev",
-      // Placeholder for local dev. P0b: replace with the id from `wrangler d1 create spear-studio-dev --location enam`.
+      "database_name": "spear-studio-local",
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "../../packages/db/migrations"
     }
-  ]
+  ],
+  "queues": {
+    "producers": [{ "binding": "JOBS_QUEUE", "queue": "spear-jobs-local" }]
+  },
+  "env": {
+    "dev": {
+      "name": "spear-studio-dev",
+      "vars": {
+        // Fill from Zero Trust > Access > Applications (README "First-time setup").
+        "CF_ACCESS_TEAM_DOMAIN": "",
+        "CF_ACCESS_AUD": ""
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "spear-studio-dev",
+          // Replace with the id printed by `wrangler d1 create spear-studio-dev --location enam`.
+          "database_id": "REPLACE_WITH_DEV_D1_ID",
+          "migrations_dir": "../../packages/db/migrations"
+        }
+      ],
+      "queues": {
+        "producers": [{ "binding": "JOBS_QUEUE", "queue": "spear-jobs-dev" }]
+      }
+    },
+    "production": {
+      "name": "spear-studio",
+      "vars": {
+        "CF_ACCESS_TEAM_DOMAIN": "",
+        "CF_ACCESS_AUD": ""
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "spear-studio-prod",
+          "database_id": "REPLACE_WITH_PROD_D1_ID",
+          "migrations_dir": "../../packages/db/migrations"
+        }
+      ],
+      "queues": {
+        "producers": [{ "binding": "JOBS_QUEUE", "queue": "spear-jobs" }]
+      }
+    }
+  }
 }

@@ -1,8 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { removeMemberAction, revokeInviteAction, updateMemberRoleAction } from "@/app/(app)/settings/team/actions";
-import { Trash, X } from "@/components/icons";
+import {
+  grantClientAccessAction,
+  removeMemberAction,
+  revokeClientAccessAction,
+  revokeInviteAction,
+  updateMemberRoleAction,
+} from "@/app/(app)/settings/team/actions";
+import { Plus, Trash, X } from "@/components/icons";
 import type { Option } from "@/components/client-fields";
 import { FormMessage } from "@/components/form-message";
 import { idleState, type FormState } from "@/components/form-state";
@@ -10,12 +16,88 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/input";
 
-export type MemberRow = { id: string; email: string; name: string | null; role: string; clients: string[]; isYou: boolean };
+export type MemberRow = {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  isStaff: boolean;
+  clients: { id: string; name: string; roleLabel: string }[];
+  isYou: boolean;
+};
 export type InviteRow = { id: string; email: string; roleLabel: string; clientName: string | null; createdAt: string };
 
-export function MemberList({ members, roles }: { members: MemberRow[]; roles: Option[] }) {
+function ClientAccess({
+  member,
+  allClients,
+  pending,
+  run,
+}: {
+  member: MemberRow;
+  allClients: Option[];
+  pending: boolean;
+  run: (fn: () => Promise<FormState>) => void;
+}) {
+  const [choice, setChoice] = useState("");
+  const available = allClients.filter((c) => !member.clients.some((g) => g.id === c.value));
+  return (
+    <div className="flex basis-full flex-wrap items-center gap-1.5 pt-1">
+      <span className="text-xs text-muted-foreground">Client access:</span>
+      {member.clients.length === 0 ? <span className="text-xs text-muted-foreground">none</span> : null}
+      {member.clients.map((c) => (
+        <span key={c.id} className="inline-flex items-center gap-1 rounded-full border bg-surface-2 py-0.5 pr-1 pl-2 text-xs">
+          {c.name}
+          <span className="text-muted-foreground">· {c.roleLabel}</span>
+          <button
+            type="button"
+            aria-label={`Remove ${member.email} from ${c.name}`}
+            disabled={pending}
+            onClick={() => run(() => revokeClientAccessAction(member.id, c.id))}
+            className="grid size-4 place-items-center rounded-full text-muted-foreground hover:bg-hover hover:text-foreground"
+          >
+            <X className="size-3" />
+          </button>
+        </span>
+      ))}
+      {available.length > 0 ? (
+        <span className="inline-flex items-center gap-1">
+          <Select
+            aria-label={`Add client access for ${member.email}`}
+            className="w-44"
+            value={choice}
+            onChange={(e) => setChoice(e.target.value)}
+            disabled={pending}
+          >
+            <option value="">Add a client</option>
+            {available.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+          <Button
+            size="icon"
+            variant="secondary"
+            aria-label="Grant access"
+            disabled={pending || !choice}
+            onClick={() => {
+              const clientId = choice;
+              setChoice("");
+              run(() => grantClientAccessAction(member.id, clientId));
+            }}
+          >
+            <Plus />
+          </Button>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+export function MemberList({ members, roles, clients }: { members: MemberRow[]; roles: Option[]; clients: Option[] }) {
   const [pending, start] = useTransition();
   const [state, setState] = useState<FormState>(idleState);
+  const run = (fn: () => Promise<FormState>) => start(async () => setState(await fn()));
   return (
     <div>
       <ul className="divide-y">
@@ -28,7 +110,7 @@ export function MemberList({ members, roles }: { members: MemberRow[]; roles: Op
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {m.name ? m.email : null}
-                {m.clients.length > 0 ? `${m.name ? " · " : ""}${m.clients.join(", ")}` : null}
+                {m.isStaff ? `${m.name ? " · " : ""}Sees every client` : null}
               </p>
             </div>
             <Select
@@ -57,6 +139,7 @@ export function MemberList({ members, roles }: { members: MemberRow[]; roles: Op
             >
               <Trash />
             </Button>
+            {m.isStaff ? null : <ClientAccess member={m} allClients={clients} pending={pending} run={run} />}
           </li>
         ))}
       </ul>

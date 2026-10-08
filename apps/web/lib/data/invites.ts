@@ -32,7 +32,10 @@ export async function createInvite(ctx: DataContext, input: unknown): Promise<St
     });
     if (!owned) throw new ValidationError("Pick a client of this agency.", { clientId: "Unknown client." });
   }
-  const existing = await ctx.db.query.member.findFirst({ where: eq(member.email, data.email) });
+  // Scoped to this agency: never reveal that an email belongs to another agency.
+  const existing = await ctx.db.query.member.findFirst({
+    where: and(eq(member.email, data.email), eq(member.agencyId, ctx.viewer.agencyId)),
+  });
   if (existing) throw new ValidationError("This person is already a member.", { email: "Already a member." });
 
   try {

@@ -58,6 +58,7 @@ export default tseslint.config(
           ],
           patterns: [
             { group: ["@/lib/data/*", "!@/lib/data/server"], allowTypeImports: true, message: "Import from @/lib/data or @/lib/data/server." },
+            { group: ["@spear/db/*"], allowTypeImports: true, message: "Use getData(); only types may be imported here." },
           ],
         },
       ],

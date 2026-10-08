@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { canManageTeam, roleLabel } from "@spear/core";
+import { canManageTeam, isAgencyStaff, roleLabel } from "@spear/core";
 import type { ClientSummary, Viewer } from "@/lib/data";
-import { House, SquaresFour, UsersThree } from "@/components/icons";
+import { House, Pulse, SquaresFour, UsersThree } from "@/components/icons";
 import { ClientAvatar } from "@/components/client-avatar";
 import { NavLink } from "@/components/nav-link";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -46,6 +46,12 @@ export function SidebarContent({
           <NavLink href="/settings/team">
             <UsersThree />
             Team
+          </NavLink>
+        ) : null}
+        {isAgencyStaff(viewer.role) ? (
+          <NavLink href="/settings/system">
+            <Pulse />
+            System
           </NavLink>
         ) : null}
       </nav>

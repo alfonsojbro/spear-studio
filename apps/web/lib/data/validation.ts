@@ -48,7 +48,7 @@ export const socialAccountInput = z.object({
 export type SocialAccountInput = z.infer<typeof socialAccountInput>;
 
 export const inviteInput = z.object({
-  email: z.email("Enter a valid email.").transform((e) => e.trim().toLowerCase()),
+  email: z.string().trim().toLowerCase().pipe(z.email("Enter a valid email.")),
   role: z.enum(AGENCY_ROLES, { error: "Pick a role." }),
   clientId: z
     .string()

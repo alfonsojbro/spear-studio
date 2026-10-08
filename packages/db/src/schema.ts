@@ -140,7 +140,7 @@ export const staffInvite = sqliteTable(
     ...timestamps,
   },
   (t) => [
-    uniqueIndex("staff_invite_open_email_idx").on(t.email).where(sql`accepted_at is null`),
+    uniqueIndex("staff_invite_open_agency_email_idx").on(t.agencyId, t.email).where(sql`accepted_at is null`),
     check("staff_invite_email_lower", sql`${t.email} = lower(${t.email})`),
     check(
       "staff_invite_role_check",
@@ -149,9 +149,36 @@ export const staffInvite = sqliteTable(
   ],
 );
 
+/** Written by the system-ping Workflow (jobs worker). Agency-level, not client data. */
+export const jobHeartbeat = sqliteTable(
+  "job_heartbeat",
+  {
+    id: text("id").primaryKey(),
+    agencyId: text("agency_id")
+      .notNull()
+      .references(() => agency.id, { onDelete: "cascade" }),
+    jobName: text("job_name").notNull(),
+    instanceId: text("instance_id").notNull().unique(),
+    requestedBy: text("requested_by").references(() => member.id, { onDelete: "set null" }),
+    requestedAt: text("requested_at").notNull(),
+    ranAt: text("ran_at").notNull().default(nowIso),
+    workerId: text("worker_id").notNull(),
+  },
+  (t) => [index("job_heartbeat_agency_ran_idx").on(t.agencyId, t.ranAt)],
+);
+
+/** Message on the `jobs` queue. Versioned by `type`. */
+export type JobMessage = {
+  type: "system.ping";
+  agencyId: string;
+  requestedBy: string;
+  requestedAt: string;
+};
+
 export type Agency = typeof agency.$inferSelect;
 export type Member = typeof member.$inferSelect;
 export type Client = typeof client.$inferSelect;
 export type ClientMember = typeof clientMember.$inferSelect;
 export type SocialAccount = typeof socialAccount.$inferSelect;
 export type StaffInvite = typeof staffInvite.$inferSelect;
+export type JobHeartbeat = typeof jobHeartbeat.$inferSelect;

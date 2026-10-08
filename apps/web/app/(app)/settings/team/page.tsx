@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { AGENCY_ROLES, canManageTeam, roleLabel } from "@spear/core";
+import { AGENCY_ROLES, canManageTeam, isAgencyStaff, roleLabel } from "@spear/core";
 import { InviteForm } from "@/components/invite-form";
 import { PageHeader } from "@/components/page-header";
 import { InviteList, MemberList } from "@/components/team-lists";
@@ -43,15 +43,17 @@ export default async function TeamPage() {
         />
       </Panel>
       <Panel>
-        <PanelHeader title="Members" description="The agency always keeps at least one owner." />
+        <PanelHeader title="Members" description="Staff see every client. Freelancers see only the clients you grant here. The agency always keeps at least one owner." />
         <MemberList
           roles={roles}
+          clients={clients.map((c) => ({ value: c.id, label: c.name }))}
           members={members.map((m) => ({
             id: m.id,
             email: m.email,
             name: m.name,
             role: m.role,
-            clients: m.clients.map((c) => c.name),
+            isStaff: isAgencyStaff(m.role),
+            clients: m.clients.map((c) => ({ id: c.id, name: c.name, roleLabel: roleLabel(c.role) })),
             isYou: m.id === data.viewer.memberId,
           }))}
         />

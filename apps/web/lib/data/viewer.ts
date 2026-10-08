@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { isAgencyStaff, type AgencyRole } from "@spear/core";
 import { clientMember, member, staffInvite, type Database } from "@spear/db";
 import { isUniqueViolation } from "./errors";
@@ -36,35 +36,26 @@ export async function resolveViewer(db: Database, rawEmail: string): Promise<Vie
 
     const memberId = crypto.randomUUID();
     const now = new Date().toISOString();
+    // Every statement re-checks that the invite is still open, inside one D1 batch
+    // (a transaction). If a parallel request accepted it first, nothing is inserted.
     try {
-      const insertMember = db.insert(member).values({
-        id: memberId,
-        agencyId: invite.agencyId,
-        email,
-        role: invite.role,
-        createdBy: invite.createdBy,
-      });
-      const accept = db
-        .update(staffInvite)
-        .set({ acceptedAt: now })
-        .where(and(eq(staffInvite.id, invite.id), isNull(staffInvite.acceptedAt)));
-      if (invite.clientId) {
-        await db.batch([
-          insertMember,
-          db.insert(clientMember).values({
-            id: crypto.randomUUID(),
-            clientId: invite.clientId,
-            memberId,
-            role: "freelancer",
-            createdBy: invite.createdBy,
-          }),
-          accept,
-        ]);
-      } else {
-        await db.batch([insertMember, accept]);
-      }
+      await db.batch([
+        db.run(sql`
+          insert into member (id, agency_id, email, role, created_by)
+          select ${memberId}, agency_id, email, role, created_by from staff_invite
+          where id = ${invite.id} and accepted_at is null`),
+        db.run(sql`
+          insert into client_member (id, client_id, member_id, role, created_by)
+          select ${crypto.randomUUID()}, client_id, ${memberId}, 'freelancer', created_by from staff_invite
+          where id = ${invite.id} and accepted_at is null and client_id is not null
+            and exists (select 1 from member where id = ${memberId})`),
+        db
+          .update(staffInvite)
+          .set({ acceptedAt: now })
+          .where(and(eq(staffInvite.id, invite.id), isNull(staffInvite.acceptedAt))),
+      ]);
     } catch (error) {
-      // A parallel first request accepted the invite already. Fall through and read the row.
+      // The same email was inserted by a parallel request. Fall through and read the row.
       if (!isUniqueViolation(error)) throw error;
     }
     row = await db.query.member.findFirst({ where: eq(member.email, email) });

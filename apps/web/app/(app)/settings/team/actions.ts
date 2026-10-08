@@ -51,3 +51,25 @@ export async function removeMemberAction(memberId: string): Promise<FormState> {
   revalidatePath("/", "layout");
   return { status: "ok", message: "Member removed.", at: Date.now() };
 }
+
+export async function grantClientAccessAction(memberId: string, clientId: string): Promise<FormState> {
+  const data = await getData();
+  try {
+    await data.members.grantClientAccess(memberId, clientId, "freelancer");
+  } catch (error) {
+    return toFormState(error);
+  }
+  revalidatePath("/", "layout");
+  return { status: "ok", message: "Client access granted.", at: Date.now() };
+}
+
+export async function revokeClientAccessAction(memberId: string, clientId: string): Promise<FormState> {
+  const data = await getData();
+  try {
+    await data.members.revokeClientAccess(memberId, clientId);
+  } catch (error) {
+    return toFormState(error);
+  }
+  revalidatePath("/", "layout");
+  return { status: "ok", message: "Client access removed.", at: Date.now() };
+}

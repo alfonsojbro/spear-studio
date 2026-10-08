@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm db:local && next dev --port 3000",
+    "dev": "pnpm db:local && pnpm run \"/^dev:(next|jobs)$/\"",
+    "dev:next": "next dev --hostname 127.0.0.1 --port ${PORT:-3000}",
+    "dev:jobs": "wrangler dev -c wrangler.jobs.jsonc --ip 127.0.0.1 --port ${JOBS_PORT:-8787} --inspector-port ${JOBS_INSPECTOR_PORT:-9230}",
     "db:local": "wrangler d1 migrations apply DB --local && wrangler d1 execute DB --local --file=../../packages/db/seed-dev.sql",
     "db:reset": "rm -rf .wrangler/state/v3/d1 && pnpm db:local",
     "build": "opennextjs-cloudflare build",
@@ -24,6 +26,7 @@
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.3",
     "geist": "^1.7.2",
+    "jose": "^6.2.12",
     "next": "16.4.0",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.7.0",
