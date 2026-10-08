@@ -1,5 +1,6 @@
 import "server-only";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { connection } from "next/server";
 import { z } from "zod";
 
 const schema = z.object({
@@ -21,6 +22,8 @@ export class EnvError extends Error {
  * loads process.env. Throws loudly on invalid or unsafe config.
  */
 export async function getEnv(): Promise<AppEnv> {
+  // Request-time only: opts every caller out of static prerendering, so builds never need env or bindings.
+  await connection();
   const { env: cf } = await getCloudflareContext({ async: true });
   const cfVars = cf as unknown as Record<string, unknown>;
   const pick = (key: string) => {

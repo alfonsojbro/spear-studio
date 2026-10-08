@@ -1,0 +1,37 @@
+/**
+ * The only icon import point. Phosphor, regular weight, everywhere.
+ * The /ssr build works in both server and client components.
+ */
+export {
+  Archive,
+  ArrowCounterClockwise,
+  ArrowRight,
+  CalendarBlank,
+  CaretDown,
+  CaretRight,
+  ChartLineUp,
+  ChatCircleText,
+  Check,
+  Clock,
+  Compass,
+  Desktop,
+  EnvelopeSimple,
+  FilmStrip,
+  GearSix,
+  House,
+  InstagramLogo,
+  List,
+  LockSimple,
+  Moon,
+  Plus,
+  Scissors,
+  SquaresFour,
+  Sun,
+  TiktokLogo,
+  Trash,
+  UsersThree,
+  Warning,
+  X,
+  YoutubeLogo,
+} from "@phosphor-icons/react/dist/ssr";
+export type { Icon } from "@phosphor-icons/react";

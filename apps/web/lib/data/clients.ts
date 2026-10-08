@@ -1,10 +1,10 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
-import { client, type Client } from "@spear/db";
+import { client, PLATFORMS, type Client, type Platform } from "@spear/db";
 import { ForbiddenError, isUniqueViolation, NotFoundError, ValidationError } from "./errors";
 import { assertCanManageClients, clientReadScope, type DataContext } from "./scope";
 import { clientInput, parseInput, slugify } from "./validation";
 
-export type ClientSummary = Client & { accountCount: number };
+export type ClientSummary = Client & { accountCount: number; platforms: Platform[] };
 
 export async function listClients(
   { db, viewer }: DataContext,
@@ -18,11 +18,19 @@ export async function listClients(
       client,
       // Fully qualified: drizzle renders bare column names inside sql``, which would bind to the subquery table.
       accountCount: sql<number>`(select count(*) from social_account sa where sa.client_id = "client"."id")`,
+      platforms: sql<string | null>`(select group_concat(distinct sa.platform) from social_account sa where sa.client_id = "client"."id")`,
     })
     .from(client)
     .where(where)
     .orderBy(asc(client.isSample), asc(client.name));
-  return rows.map((r) => ({ ...r.client, accountCount: Number(r.accountCount) }));
+  return rows.map((r) => {
+    const found = (r.platforms ?? "").split(",");
+    return {
+      ...r.client,
+      accountCount: Number(r.accountCount),
+      platforms: PLATFORMS.filter((p) => found.includes(p)),
+    };
+  });
 }
 
 /** Throws NotFoundError when the client does not exist or the viewer may not read it. */
