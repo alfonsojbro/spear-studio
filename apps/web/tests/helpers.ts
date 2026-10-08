@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getPlatformProxy } from "wrangler";
 import { createDatabase, type Database } from "@spear/db";
@@ -6,9 +7,9 @@ import type { AgencyRole } from "@spear/core";
 import { createData } from "@/lib/data";
 import { resolveViewer, type Viewer } from "@/lib/data/viewer";
 
-const migration = fileURLToPath(new URL("../../../packages/db/migrations/0001_core.sql", import.meta.url));
+const migrationsDir = fileURLToPath(new URL("../../../packages/db/migrations/", import.meta.url));
 
-/** Splits a migration into statements. Fine for 0001 (no triggers or semicolons in strings). */
+/** Splits a migration into statements. Fine for our migrations (no triggers or semicolons in strings). */
 function statements(sqlText: string): string[] {
   return sqlText
     .split("\n")
@@ -28,7 +29,10 @@ export async function createTestDb(): Promise<TestDb> {
     persist: false,
   });
   const d1 = proxy.env.DB;
-  await d1.batch(statements(readFileSync(migration, "utf8")).map((s) => d1.prepare(s)));
+  // Apply every migration in order, exactly as `wrangler d1 migrations apply` would.
+  for (const file of readdirSync(migrationsDir).filter((f) => f.endsWith(".sql")).sort()) {
+    await d1.batch(statements(readFileSync(join(migrationsDir, file), "utf8")).map((s) => d1.prepare(s)));
+  }
   return { db: createDatabase(d1), d1, dispose: () => proxy.dispose() };
 }
 
@@ -79,8 +83,8 @@ export async function viewerFor(db: Database, email: string): Promise<Viewer> {
   return viewer;
 }
 
-export async function dataFor(db: Database, email: string) {
-  return createData(db, await viewerFor(db, email));
+export async function dataFor(db: Database, email: string, deps: Parameters<typeof createData>[2] = {}) {
+  return createData(db, await viewerFor(db, email), deps);
 }
 
 export const validClient = { name: "New Client", timezone: "America/Managua", language: "es", region: "NI" };

@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { isAgencyStaff, type AgencyRole } from "@spear/core";
 import { clientMember, member, staffInvite, type Database } from "@spear/db";
 import { isUniqueViolation } from "./errors";
@@ -39,20 +39,27 @@ export async function resolveViewer(db: Database, rawEmail: string): Promise<Vie
     // Every statement re-checks that the invite is still open, inside one D1 batch
     // (a transaction). If a parallel request accepted it first, nothing is inserted.
     try {
-      await db.batch([
-        db.run(sql`
-          insert into member (id, agency_id, email, role, created_by)
-          select ${memberId}, agency_id, email, role, created_by from staff_invite
-          where id = ${invite.id} and accepted_at is null`),
-        db.run(sql`
-          insert into client_member (id, client_id, member_id, role, created_by)
-          select ${crypto.randomUUID()}, client_id, ${memberId}, 'freelancer', created_by from staff_invite
-          where id = ${invite.id} and accepted_at is null and client_id is not null
-            and exists (select 1 from member where id = ${memberId})`),
-        db
-          .update(staffInvite)
-          .set({ acceptedAt: now })
-          .where(and(eq(staffInvite.id, invite.id), isNull(staffInvite.acceptedAt))),
+      // Raw D1 batch: drizzle's batch() only takes query builders, and these are INSERT ... SELECT.
+      const d1 = db.$client;
+      await d1.batch([
+        d1
+          .prepare(
+            `insert into member (id, agency_id, email, role, created_by)
+             select ?1, agency_id, email, role, created_by from staff_invite
+             where id = ?2 and accepted_at is null`,
+          )
+          .bind(memberId, invite.id),
+        d1
+          .prepare(
+            `insert into client_member (id, client_id, member_id, role, created_by)
+             select ?1, client_id, ?2, 'freelancer', created_by from staff_invite
+             where id = ?3 and accepted_at is null and client_id is not null
+               and exists (select 1 from member where id = ?2)`,
+          )
+          .bind(crypto.randomUUID(), memberId, invite.id),
+        d1
+          .prepare(`update staff_invite set accepted_at = ?1, updated_at = ?1 where id = ?2 and accepted_at is null`)
+          .bind(now, invite.id),
       ]);
     } catch (error) {
       // The same email was inserted by a parallel request. Fall through and read the row.

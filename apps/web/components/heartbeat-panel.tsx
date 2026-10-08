@@ -20,6 +20,30 @@ function secondsBetween(a: string, b: string) {
   return Math.max(0, (new Date(b).getTime() - new Date(a).getTime()) / 1000);
 }
 
+const sleep = (ms: number, onTimer: (t: ReturnType<typeof setTimeout>) => void) =>
+  new Promise<void>((resolve) => onTimer(setTimeout(resolve, ms)));
+
+/** Polls GET /api/jobs/ping until a heartbeat requested at or after `since` shows up, or the timeout passes. */
+async function waitForHeartbeat(
+  since: string,
+  onTimer: (t: ReturnType<typeof setTimeout>) => void,
+): Promise<Heartbeat> {
+  const deadline = Date.now() + TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch("/api/jobs/ping", { cache: "no-store" });
+      if (res.ok) {
+        const body = (await res.json()) as { heartbeat: Heartbeat };
+        if (body.heartbeat && body.heartbeat.requestedAt >= since) return body.heartbeat;
+      }
+    } catch {
+      // Network blip: keep polling until the deadline.
+    }
+    await sleep(POLL_MS, onTimer);
+  }
+  return null;
+}
+
 export function HeartbeatPanel({ initial }: { initial: Heartbeat }) {
   const [heartbeat, setHeartbeat] = useState<Heartbeat>(initial);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
@@ -28,27 +52,6 @@ export function HeartbeatPanel({ initial }: { initial: Heartbeat }) {
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
   }, []);
-
-  async function poll(since: string, startedAt: number) {
-    try {
-      const res = await fetch("/api/jobs/ping", { cache: "no-store" });
-      if (res.ok) {
-        const body = (await res.json()) as { heartbeat: Heartbeat };
-        if (body.heartbeat && body.heartbeat.requestedAt >= since) {
-          setHeartbeat(body.heartbeat);
-          setPhase({ kind: "done" });
-          return;
-        }
-      }
-    } catch {
-      // Network blip: keep polling until the timeout.
-    }
-    if (Date.now() - startedAt > TIMEOUT_MS) {
-      setPhase({ kind: "timeout" });
-      return;
-    }
-    timer.current = setTimeout(() => void poll(since, startedAt), POLL_MS);
-  }
 
   async function run() {
     setPhase({ kind: "waiting", since: "" });
@@ -60,7 +63,13 @@ export function HeartbeatPanel({ initial }: { initial: Heartbeat }) {
         return;
       }
       setPhase({ kind: "waiting", since: body.requestedAt });
-      void poll(body.requestedAt, Date.now());
+      const found = await waitForHeartbeat(body.requestedAt, (t) => (timer.current = t));
+      if (found) {
+        setHeartbeat(found);
+        setPhase({ kind: "done" });
+      } else {
+        setPhase({ kind: "timeout" });
+      }
     } catch {
       setPhase({ kind: "error", message: "Could not reach the server." });
     }
