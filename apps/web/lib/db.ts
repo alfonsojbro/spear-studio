@@ -13,7 +13,8 @@ export const getDb = cache(async (): Promise<Database> => {
 });
 
 /** Producer for the `jobs` queue. Only lib/data/server.ts passes it to the data layer. */
-export async function getJobsQueue(): Promise<Queue<JobMessage>> {
+export async function getJobsQueue(): Promise<Queue<JobMessage> | undefined> {
   const { env } = await getCloudflareContext({ async: true });
-  return env.JOBS_QUEUE as Queue<JobMessage>;
+  // Undefined when a dev server was started before the binding existed.
+  return env.JOBS_QUEUE as Queue<JobMessage> | undefined;
 }

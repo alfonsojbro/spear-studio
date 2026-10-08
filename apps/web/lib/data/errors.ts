@@ -28,6 +28,11 @@ export class ValidationError extends DataError {
   }
 }
 
+/** A binding or downstream service is missing (for example the jobs queue in a stale dev server). */
+export class UnavailableError extends DataError {
+  override name = "UnavailableError";
+}
+
 export function isDataError(error: unknown): error is DataError {
   return error instanceof DataError;
 }

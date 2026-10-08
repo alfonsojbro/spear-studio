@@ -10,7 +10,8 @@ pnpm + Turborepo, Node 22. Run commands with Node 22 (`.nvmrc`).
 - No raw DB access in routes, actions or components. ESLint blocks `@/lib/db`, `drizzle-orm`
   and runtime `@spear/db` imports under `app/` and `components/`.
 - Client reads use `clientReadScope(viewer)`. "Missing" and "not yours" both throw
-  `NotFoundError` and render a 404, so ids never leak.
+  `NotFoundError` and render a 404, so ids never leak. Membership and invite checks are
+  always scoped by `agency_id`.
 - New data functions need isolation tests in `apps/web/tests/` (owner, editor, freelancer,
   non-member).
 - Vectorize: create metadata indexes (`client_id`) before inserting; every query filters
@@ -19,10 +20,19 @@ pnpm + Turborepo, Node 22. Run commands with Node 22 (`.nvmrc`).
 ## Identity
 - No `proxy.ts`/middleware (OpenNext does not run Node middleware). Re-check identity in
   every server component, action and route handler through `getViewer()`/`getData()`.
-- Deployed: Cloudflare Access JWT (`Cf-Access-Jwt-Assertion`), verified with `jose` (P0b).
+- Deployed: Cloudflare Access JWT (`Cf-Access-Jwt-Assertion`), verified with `jose` against
+  the team JWKS (issuer + AUD checked) in `lib/identity.ts`. No config means no access.
   Dev: `DEV_USER_EMAIL` in `.dev.vars`, honoured only when `NODE_ENV=development`.
 - Guest/public pages (P4) use a hashed, expiring token checked server-side; Access Bypass
   only on `/r/*`.
+
+## Jobs
+- Web produces, never consumes: `lib/data/jobs.ts` sends to the `jobs` queue (`JOBS_QUEUE`).
+- The jobs Worker (`wrangler.jobs.jsonc`, entry `queues/consumer.ts`) starts one Workflow
+  instance per message (instance id derived from the message id) and acks.
+- Workflow steps must be idempotent (unique keys, `on conflict do nothing`) and return small
+  results (< 1 MiB). New job types: add to `JobMessage` in `packages/db/src/schema.ts`.
+- Local: `pnpm dev` runs both Workers; they share local D1 and queue state.
 
 ## Secrets and media
 - Secrets only as Worker secrets or `.dev.vars` (gitignored). Never `NEXT_PUBLIC_*`.
@@ -51,3 +61,5 @@ pnpm + Turborepo, Node 22. Run commands with Node 22 (`.nvmrc`).
 ## Process
 - Never run repo-wide formatters, `eslint --fix` across the repo, or codemods.
 - `next dev` would write `apps/web/AGENTS.md`; it is disabled with `agentRules: false`.
+- Dev servers bind `127.0.0.1` only (the dev identity stub must not reach the LAN).
+- Never start a long-running process in the foreground from an agent; background it and stop it.

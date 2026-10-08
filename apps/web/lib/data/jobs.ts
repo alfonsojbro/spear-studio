@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { isAgencyStaff } from "@spear/core";
 import { jobHeartbeat, type JobHeartbeat, type JobMessage } from "@spear/db";
-import { ForbiddenError } from "./errors";
+import { ForbiddenError, UnavailableError } from "./errors";
 import type { DataContext } from "./scope";
 
 function assertStaff(ctx: DataContext): void {
@@ -11,7 +11,9 @@ function assertStaff(ctx: DataContext): void {
 /** Puts a system.ping on the jobs queue. The jobs worker turns it into a Workflow run. */
 export async function requestPing(ctx: DataContext): Promise<{ requestedAt: string }> {
   assertStaff(ctx);
-  if (!ctx.jobsQueue) throw new Error("JOBS_QUEUE binding is missing. Check wrangler.jsonc.");
+  if (!ctx.jobsQueue) {
+    throw new UnavailableError("The jobs queue is not connected. Restart pnpm dev so it picks up wrangler.jsonc.");
+  }
   const message: JobMessage = {
     type: "system.ping",
     agencyId: ctx.viewer.agencyId,

@@ -1,4 +1,4 @@
-# Copy to .dev.vars (gitignored). Local development only.
+# Copy to .dev.vars (gitignored). Local development only; read by `next dev` and the jobs worker.
 # Dev identity stub. Honoured only when NODE_ENV=development; a production build refuses to run with it.
 # Seeded identities: owner@spearmedia.test, editor@spearmedia.test, freelancer@spearmedia.test
 DEV_USER_EMAIL=owner@spearmedia.test

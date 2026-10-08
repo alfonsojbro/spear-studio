@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { JobMessage } from "@spear/db";
-import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/data";
+import { ForbiddenError, NotFoundError, UnavailableError, ValidationError } from "@/lib/data";
 import { resolveViewer } from "@/lib/data/viewer";
 import {
   AGENCY,
@@ -49,6 +49,11 @@ describe("jobs (queue producer + heartbeat)", () => {
     await expect(freelancer.jobs.requestPing()).rejects.toBeInstanceOf(ForbiddenError);
     await expect(freelancer.jobs.getLastHeartbeat()).rejects.toBeInstanceOf(ForbiddenError);
     expect(queue.sent).toHaveLength(0);
+  });
+
+  it("a missing queue binding is a clear UnavailableError, not a crash", async () => {
+    const owner = await dataFor(t.db, PEOPLE.owner.email);
+    await expect(owner.jobs.requestPing()).rejects.toBeInstanceOf(UnavailableError);
   });
 
   it("heartbeats are read per agency, newest first", async () => {

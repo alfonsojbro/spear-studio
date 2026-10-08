@@ -102,7 +102,7 @@ export function MemberList({ members, roles, clients }: { members: MemberRow[]; 
     <div>
       <ul className="divide-y">
         {members.map((m) => (
-          <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:flex-nowrap">
+          <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
             <div className="min-w-0 basis-full sm:flex-1 sm:basis-auto">
               <p className="flex items-center gap-2 truncate text-sm font-medium">
                 {m.name ?? m.email}

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ForbiddenError, type Data } from "@/lib/data";
+import { ForbiddenError, UnavailableError, type Data } from "@/lib/data";
 import { getDataOrNull } from "@/lib/data/server";
 
 // Identity is re-checked on every call (no middleware). Staff only; enforced in lib/data/jobs.ts.
@@ -15,6 +15,7 @@ async function withData(handler: (data: Data) => Promise<NextResponse>): Promise
     return await handler(data);
   } catch (error) {
     if (error instanceof ForbiddenError) return NextResponse.json({ error: error.message }, { status: 403 });
+    if (error instanceof UnavailableError) return NextResponse.json({ error: error.message }, { status: 503 });
     throw error;
   }
 }
